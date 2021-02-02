@@ -24,7 +24,7 @@ import network
 import agent
 import util
 
-PED_RADIUS = 0.3
+PED_RADIUS = 0.7
 # angle_1 - angle_2
 # contains direction in range [-3.14, 3.14]
 def find_angle_diff(angle_1, angle_2):
@@ -95,8 +95,8 @@ class NN_jackal():
         self.sub_mode = rospy.Subscriber('~mode',PlannerMode, self.cbPlannerMode)
         self.sub_global_goal = rospy.Subscriber('~goal',PoseStamped, self.cbGlobalGoal)
         
-        self.use_clusters = True
-        # self.use_clusters = False
+        # self.use_clusters = True
+        self.use_clusters = False
         if self.use_clusters:
             self.sub_clusters = rospy.Subscriber('~clusters',Clusters, self.cbClusters)
         else:
@@ -157,7 +157,7 @@ class NN_jackal():
         valid_inds = np.where(abs(rel_angle)< 5.0 / 6.0 * np.pi)[0]
 
         # get the n closest agents
-        self.other_agents_state = []
+        other_agents = []
         if len(valid_inds) == 0:
             return
         else:
@@ -179,16 +179,13 @@ class NN_jackal():
             # print 'num_neighbors', num_neighbors
             # print 'rel_dist', rel_dist
             # neighbor_inds = np.argpartition(rel_dist, num_neighbors)[:num_neighbors]
-            if len(rel_dist) > self.value_net.num_agents-1:
-                num_neighbors = self.value_net.num_agents-1
-                neighbor_inds = np.argpartition(rel_dist, num_neighbors)[:num_neighbors]
-            else:
-                neighbor_inds = np.arange(len(rel_dist))
+            neighbor_inds = np.arange(len(rel_dist))
             # agent state: [pos.x, pos.y, vel.x, vel.y, heading_angle, pref_speed, \
             #            goals[0].x, goals[0].y, radius, turning_dir]
             for tt in neighbor_inds:
                 ped_traj = ped_traj_vec[tt]
                 # rel pos, rel vel, size
+                index = ped_traj.ped_id
                 x = ped_traj.traj[-1].pose.x; y = ped_traj.traj[-1].pose.y
                 v_x = ped_traj.traj[-1].velocity.x; v_y = ped_traj.traj[-1].velocity.y
                 radius = PED_RADIUS;turning_dir = 0.0
@@ -211,11 +208,11 @@ class NN_jackal():
 
                 if pref_speed < 0.2:
                     pref_speed = 0; v_x = 0; v_y = 0
-                other_agent_state = np.array([x, y, v_x, v_y, heading_angle, pref_speed, \
-                    goal_x, goal_y, radius, turning_dir])
-                self.other_agents_state.append(other_agent_state)
+                other_agents.append(agent.Agent(x, y, goal_x, goal_y, radius, pref_speed, \
+                    heading_angle, index))
+            self.other_agents_state = other_agents
 
-            self.prev_other_agents_state = copy.deepcopy(self.other_agents_state)
+            # self.prev_other_agents_state = copy.deepcopy(self.other_agents_state)
         t_end = rospy.Time.now()
         # print "cbPeds took:", (t_end - t_start).to_sec(), "sec"
 
@@ -388,7 +385,7 @@ class NN_jackal():
         obs = host_agent.observe(other_agents_state)[1:]
         obs = np.expand_dims(obs, axis=0)
         # print "obs:", obs
-        predictions = self.nn.predict_p(obs, None)[0]
+        predictions = self.nn.predict_p(obs)[0]
         # print "predictions:", predictions
         # print "best action index:", np.argmax(predictions)
         raw_action = copy.deepcopy(self.actions[np.argmax(predictions)])

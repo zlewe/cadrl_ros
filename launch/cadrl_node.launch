@@ -13,14 +13,20 @@
         <remap from="~agent_markers" to="other_agents_markers"/>
         
         <!-- Subscriptions -->
-        <remap from="~pose" to="pose"/>
+        <!-- <remap from="~pose" to="pose"/>
         <remap from="~velocity" to="velocity"/>
         <remap from="~safe_actions" to="local_path_finder/safe_actions"/>
         <remap from="~planner_mode" to="planner_fsm/mode"/>
         <remap from="~goal" to="move_base_simple/goal"/>
         <remap from="~clusters" to="cluster/output/clusters"/>
         <remap from="~peds" to="ped_manager/ped_recent"/>
-        
+         -->
+         <remap from="~pose" to="/gazebo/pose_X1/base_link"/>
+        <remap from="~velocity" to="/gazebo/vel_X1/base_link"/>
+        <remap from="~safe_actions" to="local_path_finder/safe_actions"/>
+        <remap from="~planner_mode" to="planner_fsm/mode"/>
+        <remap from="~goal" to="/move_base_simple/goal"/>
+        <remap from="~peds" to="/gazebo/pedtrajs"/>
         <!-- Parameters -->
         <param name="~jackal_speed" value="$(arg jackal_speed)"/>
 
